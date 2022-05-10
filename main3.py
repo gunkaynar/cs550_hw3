@@ -4,20 +4,6 @@ import matplotlib.image as mpimg
 
 image = mpimg.imread('sample.jpg')
 
-hyper_link = ['single', 'complete']
-images = list()
-for lk in hyper_link:
-    cl = AHC(image, K_init=100, K_final=10)
-    cl.train(error_margin=0.0000, linkage=lk, verbose=False)
-    images.append(cl.visualize())
-plt.figure(figsize=(20, 20))
-for i, img in enumerate(images):
-    plt.subplot(1, 2, i + 1)
-    plt.imshow(img)
-    plt.axis('off')
-    plt.title('%s linkage' % hyper_link[i])
-plt.savefig('linkage.png')
-
 Ks = [2, 3, 4, 5, 6, 10]
 draw2(image, Ks, 2, 3)
 

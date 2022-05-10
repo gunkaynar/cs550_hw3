@@ -86,16 +86,12 @@ class AHC:
         self.klist = 0
         self.distanceMatrix = 0
 
-    def calcDistance(self, c1, c2, linkage):
+    def calcDistance(self, c1, c2):
         distances = distance.cdist(c1, c2, 'euclidean')
-        if linkage == 'single':
-            return np.min(distances)
-        elif linkage == 'complete':
-            return np.max(distances)
-        else:
-            raise ValueError('linkage can only be single or complete')
+        return np.max(distances)
 
-    def calcDistanceMatrix(self, linkage, verbose):
+
+    def calcDistanceMatrix(self, verbose):
         distances = np.zeros((self.k, self.k))
         for i in range(self.k):
             for j in range(self.k):
@@ -103,8 +99,7 @@ class AHC:
                     print('Distance (%d,%d)' % (i, j))
                 if i != j and distances[i, j] == 0 and distances[j, i] == 0:
                     dist = self.calcDistance(self.data[self.membership == j],
-                                             self.data[self.membership == i],
-                                             linkage)
+                                             self.data[self.membership == i])
                     distances[i, j] = dist
                     distances[j, i] = dist
                 elif distances[i, j] != 0:
@@ -113,21 +108,15 @@ class AHC:
                     distances[i, j] = distances[j, i]
         self.distanceMatrix = distances
 
-    def iterate(self, linkage):
+    def iterate(self):
         indices = np.argwhere(self.distanceMatrix == np.amin(self.distanceMatrix[self.distanceMatrix != 0]))[0]
         ind1 = indices[0]
         ind2 = indices[1]
 
         self.membership[self.membership == self.klist[ind2]] = self.klist[ind1]
-
-        if linkage == 'single':
-            self.distanceMatrix[ind1, :] = np.minimum(self.distanceMatrix[ind2, :], self.distanceMatrix[ind1, :])
-            self.distanceMatrix[:, ind1] = np.minimum(self.distanceMatrix[:, ind2], self.distanceMatrix[:, ind1])
-            self.distanceMatrix[ind1, ind1] = 0
-        else:
-            self.distanceMatrix[ind1, :] = np.maximum(self.distanceMatrix[ind2, :], self.distanceMatrix[ind1, :])
-            self.distanceMatrix[:, ind1] = np.maximum(self.distanceMatrix[:, ind2], self.distanceMatrix[:, ind1])
-            self.distanceMatrix[ind1, ind1] = 0
+        self.distanceMatrix[ind1, :] = np.maximum(self.distanceMatrix[ind2, :], self.distanceMatrix[ind1, :])
+        self.distanceMatrix[:, ind1] = np.maximum(self.distanceMatrix[:, ind2], self.distanceMatrix[:, ind1])
+        self.distanceMatrix[ind1, ind1] = 0
         self.distanceMatrix = np.delete(self.distanceMatrix, ind2, axis=0)
         self.distanceMatrix = np.delete(self.distanceMatrix, ind2, axis=1)
 
@@ -149,7 +138,7 @@ class AHC:
         error /= self.data.shape[0]
         return error
 
-    def train(self, error_margin=0.001, verbose=False, linkage='single'):
+    def train(self, error_margin=0.001, verbose=False):
         history = dict()
 
         start_time = time.time()
@@ -158,10 +147,10 @@ class AHC:
         self.k = self.K_init
         self.klist = np.unique(self.membership)
 
-        self.calcDistanceMatrix(linkage, verbose)
+        self.calcDistanceMatrix(verbose)
 
         while self.k > self.K_final:
-            rem = self.iterate(linkage)
+            rem = self.iterate()
             if verbose:
                 print('%d merged, %d clusters remain' % (rem, self.k))
 
@@ -199,7 +188,7 @@ def draw2(data, KList, n, m):
 
     for k in KList:
         cl = AHC(data, K_init=100, K_final=k)
-        history = cl.train(error_margin=0.00, linkage='complete', verbose=False)
+        history = cl.train(error_margin=0.00, verbose=False)
 
         times.append(history['time'])
         errors.append(history['clustering_error'])
